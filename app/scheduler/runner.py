@@ -123,7 +123,6 @@ class Scheduler:
 
 
 def _check_gateway(gw: GatewayConfig, teleport: TeleportAdapter) -> GatewaySnapshot:
-    now = datetime.now(tz=timezone.utc).isoformat()
     ssh_status = Status.UNKNOWN
     hw: HardwareResult | None = None
     dk: DockerResult | None = None
@@ -137,10 +136,10 @@ def _check_gateway(gw: GatewayConfig, teleport: TeleportAdapter) -> GatewaySnaps
         ssh_status = Status.OK
     except SessionExpiredError as e:
         error_msg = f"Teleport session expired: {e}"
-        return _skipped_snapshot(gw, now, error_msg)
+        return _skipped_snapshot(gw, datetime.now(tz=timezone.utc).isoformat(), error_msg)
     except TeleportError as e:
         error_msg = str(e)
-        return _failed_snapshot(gw, now, error_msg)
+        return _failed_snapshot(gw, datetime.now(tz=timezone.utc).isoformat(), error_msg)
 
     hw = hardware.run(gw, teleport)
     dk = docker.run(gw, teleport)
@@ -160,7 +159,7 @@ def _check_gateway(gw: GatewayConfig, teleport: TeleportAdapter) -> GatewaySnaps
     snapshot = GatewaySnapshot(
         gateway_host=gw.host,
         gateway_name=gw.name,
-        timestamp=now,
+        timestamp=datetime.now(tz=timezone.utc).isoformat(),
         overall_status=Status.UNKNOWN,
         health_score=score,
         ssh_status=ssh_status,
