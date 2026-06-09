@@ -107,7 +107,9 @@ class Scheduler:
             with self._counts_lock:
                 self._failure_counts[gw.host] = self._failure_counts.get(gw.host, 0) + 1
                 count = self._failure_counts[gw.host]
-            if count < _FLAP_THRESHOLD:
+            last = db.get_latest_snapshot(gw.host)
+            already_critical = last and last.get("overall_status") == Status.CRITICAL.value
+            if count < _FLAP_THRESHOLD and not already_critical:
                 logger.warning(
                     "Gateway %s SSH failure #%d/%d — suppressed (flap protection)",
                     gw.name, count, _FLAP_THRESHOLD,

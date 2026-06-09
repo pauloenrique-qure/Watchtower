@@ -7,7 +7,9 @@ class TeleportError(Exception):
 
 
 def _sanitize_error(stderr: str) -> str:
-    s = stderr.lower()
+    import re
+    clean = re.sub(r"\x1b\[[0-9;]*m", "", stderr)
+    s = clean.lower()
     if "reverse tunnel" in s or "no tunnel connection" in s:
         return "Teleport agent disconnected"
     if "node not found" in s or "no such host" in s:
@@ -16,7 +18,7 @@ def _sanitize_error(stderr: str) -> str:
         return "Connection refused"
     if "permission denied" in s:
         return "Permission denied"
-    first_line = stderr.strip().splitlines()[0] if stderr.strip() else "Unknown error"
+    first_line = clean.strip().splitlines()[0] if clean.strip() else "Unknown error"
     return first_line[:80]
 
 
