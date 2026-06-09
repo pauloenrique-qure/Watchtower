@@ -120,6 +120,25 @@
     const ls = card.querySelector(".last-seen");
     if (ls) ls.textContent = formatTs(gw.timestamp) || "never";
 
+    // metrics
+    const payload = gw.payload || {};
+    const hw = payload.hardware || {};
+    const dk = payload.docker || {};
+    const s = (payload.pipeline || {}).summary || {};
+
+    setMetric(card, "load",       hw.load_1m != null ? `${hw.load_1m}/${hw.load_5m}/${hw.load_15m}` : null);
+    setMetric(card, "ram",        hw.ram_available_mb != null ? `${hw.ram_available_mb}MB avail` : null);
+    setMetric(card, "swap",       hw.swap_used_pct != null ? `${hw.swap_used_pct}%` : null);
+    setMetric(card, "disk",       hw.disk_used_pct != null ? `${hw.disk_used_pct}%` : null);
+    setMetric(card, "temp",       hw.temp_celsius != null ? `${hw.temp_celsius}°C` : hw.temp_celsius === null ? "UNKNOWN" : null);
+    setMetric(card, "workers",    dk.workers_total != null ? `${dk.workers_up}/${dk.workers_total} up` : null);
+    setMetric(card, "img15m",     s.images_last_15m ?? null);
+    setMetric(card, "proc15m",    s.processed_15m ?? null);
+    setMetric(card, "failed15m",  s.failed_15m ?? null, !!s.failed_15m);
+    setMetric(card, "pending2h",  s.pending_older_2h ?? null, !!s.pending_older_2h);
+    setMetric(card, "last-task",  s.last_successful_task_at ? s.last_successful_task_at.slice(0, 19) : null);
+    setMetric(card, "last-image", s.last_image_created_at  ? s.last_image_created_at.slice(0, 19)  : null);
+
     // error
     let errEl = card.querySelector(".card-error");
     if (gw.error_message) {
@@ -149,6 +168,15 @@
     if (!el) return;
     const s = (status || "unknown").toLowerCase();
     el.className = "badge badge--" + s;
+  }
+
+  function setMetric(card, name, value, warn) {
+    const el = card.querySelector(`[data-metric="${name}"]`);
+    if (!el) return;
+    el.textContent = value != null ? value : "—";
+    if (warn !== undefined) {
+      el.classList.toggle("metric--warning", !!warn);
+    }
   }
 
   function formatTs(ts) {

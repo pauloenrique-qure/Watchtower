@@ -55,32 +55,32 @@
       {% if hw %}
       <div class="metric-row">
         <span class="metric-label">Load</span>
-        <span class="metric-value">{{ hw.load_1m }}/{{ hw.load_5m }}/{{ hw.load_15m }}</span>
+        <span class="metric-value" data-metric="load">{{ hw.load_1m }}/{{ hw.load_5m }}/{{ hw.load_15m }}</span>
       </div>
       <div class="metric-row">
         <span class="metric-label">RAM</span>
-        <span class="metric-value">{{ hw.ram_available_mb }}MB avail</span>
+        <span class="metric-value" data-metric="ram">{{ hw.ram_available_mb }}MB avail</span>
       </div>
       {% if hw.swap_used_pct is not none %}
       <div class="metric-row">
         <span class="metric-label">Swap</span>
-        <span class="metric-value">{{ hw.swap_used_pct }}%</span>
+        <span class="metric-value" data-metric="swap">{{ hw.swap_used_pct }}%</span>
       </div>
       {% endif %}
       <div class="metric-row">
         <span class="metric-label">Disk /</span>
-        <span class="metric-value">{{ hw.disk_used_pct }}%</span>
+        <span class="metric-value" data-metric="disk">{{ hw.disk_used_pct }}%</span>
       </div>
       <div class="metric-row">
         <span class="metric-label">Temp</span>
-        <span class="metric-value">{% if hw.temp_celsius is not none %}{{ hw.temp_celsius }}°C{% else %}UNKNOWN{% endif %}</span>
+        <span class="metric-value" data-metric="temp">{% if hw.temp_celsius is not none %}{{ hw.temp_celsius }}°C{% else %}UNKNOWN{% endif %}</span>
       </div>
       {% endif %}
 
       {% if dk %}
       <div class="metric-row">
         <span class="metric-label">Workers</span>
-        <span class="metric-value">{{ dk.workers_up }}/{{ dk.workers_total }} up</span>
+        <span class="metric-value" data-metric="workers">{{ dk.workers_up }}/{{ dk.workers_total }} up</span>
       </div>
       {% endif %}
 
@@ -88,31 +88,31 @@
       {% set s = pl.summary %}
       <div class="metric-row">
         <span class="metric-label">Img 15m</span>
-        <span class="metric-value">{{ s.images_last_15m if s.images_last_15m is not none else '—' }}</span>
+        <span class="metric-value" data-metric="img15m">{{ s.images_last_15m if s.images_last_15m is not none else '—' }}</span>
       </div>
       <div class="metric-row">
         <span class="metric-label">Proc 15m</span>
-        <span class="metric-value">{{ s.processed_15m if s.processed_15m is not none else '—' }}</span>
+        <span class="metric-value" data-metric="proc15m">{{ s.processed_15m if s.processed_15m is not none else '—' }}</span>
       </div>
       <div class="metric-row">
         <span class="metric-label">Failed 15m</span>
-        <span class="metric-value {% if s.failed_15m %}metric--warning{% endif %}">
+        <span class="metric-value {% if s.failed_15m %}metric--warning{% endif %}" data-metric="failed15m">
           {{ s.failed_15m if s.failed_15m is not none else '—' }}
         </span>
       </div>
       <div class="metric-row">
         <span class="metric-label">Pending &gt;2h</span>
-        <span class="metric-value {% if s.pending_older_2h %}metric--warning{% endif %}">
+        <span class="metric-value {% if s.pending_older_2h %}metric--warning{% endif %}" data-metric="pending2h">
           {{ s.pending_older_2h if s.pending_older_2h is not none else '—' }}
         </span>
       </div>
       <div class="metric-row">
         <span class="metric-label">Last task</span>
-        <span class="metric-value metric--small">{{ s.last_successful_task_at[:19] if s.last_successful_task_at else '—' }}</span>
+        <span class="metric-value metric--small" data-metric="last-task">{{ s.last_successful_task_at[:19] if s.last_successful_task_at else '—' }}</span>
       </div>
       <div class="metric-row">
         <span class="metric-label">Last image</span>
-        <span class="metric-value metric--small">{{ s.last_image_created_at[:19] if s.last_image_created_at else '—' }}</span>
+        <span class="metric-value metric--small" data-metric="last-image">{{ s.last_image_created_at[:19] if s.last_image_created_at else '—' }}</span>
       </div>
       {% endif %}
     </div>
