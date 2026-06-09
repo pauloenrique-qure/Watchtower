@@ -1,0 +1,62 @@
+app:
+  check_interval_seconds: 120
+  ssh_connection_timeout: 10
+  remote_command_timeout: 30
+  gateway_max_timeout: 60
+
+gateways:
+  - name: Galeana
+    host: galeana.general.hospital.mexico
+    ssh_login: ubuntu
+    enabled: true
+    country: Mexico
+    profile: standard
+
+  - name: Sabinas
+    host: hospital.de.sabinas.mexico
+    ssh_login: ubuntu
+    enabled: true
+    country: Mexico
+    profile: standard
+
+  - name: Tierra Libertad
+    host: hospital.de.tierra.libertad.mexico
+    ssh_login: ubuntu
+    enabled: true
+    country: Mexico
+    profile: standard
+
+  - name: Doctor Arroyo
+    host: hospital.doctor.arroyo.mexico
+    ssh_login: ubuntu
+    enabled: true
+    country: Mexico
+    profile: standard
+
+  - name: Cerralvo
+    host: hospital.general.de.cerralvo.mexico
+    ssh_login: ubuntu
+    enabled: true
+    country: Mexico
+    profile: standard
+
+  - name: Linares
+    host: hospital.general.de.linares.mexico
+    ssh_login: ubuntu
+    enabled: true
+    country: Mexico
+    profile: standard
+
+  - name: Montemorelos
+    host: hospital.general.montemorelos.mexico
+    ssh_login: ubuntu
+    enabled: true
+    country: Mexico
+    profile: standard
+
+  - name: Metropolitano
+    host: mexico.metropolitano
+    ssh_login: ubuntu
+    enabled: true
+    country: Mexico
+    profile: extended

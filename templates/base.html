@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Watchtower{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <a href="/" class="brand">⬡ Watchtower</a>
+    </div>
+    <div class="topbar-right">
+      <span id="tsh-badge" class="badge badge--unknown">TSH</span>
+      <span id="sched-badge" class="badge badge--unknown">Scheduler</span>
+      <span class="clock" id="clock"></span>
+    </div>
+  </header>
+
+  {% block scheduler_controls %}{% endblock %}
+
+  <main class="content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script src="/static/js/dashboard.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

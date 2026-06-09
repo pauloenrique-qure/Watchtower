@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+{% block title %}{{ gw.name if gw else snapshot.host }} — Watchtower{% endblock %}
+
+{% block content %}
+<div class="detail-header">
+  <a href="/" class="back-link">← Dashboard</a>
+  <h1 class="detail-title">{{ gw.name if gw else snapshot.get('host','') }}</h1>
+  <span class="detail-host">{{ gw.host if gw else '' }}</span>
+  <span class="badge badge--{{ snapshot.overall_status | lower }} badge--lg">{{ snapshot.overall_status }}</span>
+  <span class="score-badge">Score: {{ snapshot.health_score if snapshot.health_score is not none else '—' }}</span>
+</div>
+
+{% set payload = snapshot.get('payload', {}) %}
+{% set hw = payload.get('hardware') %}
+{% set dk = payload.get('docker') %}
+{% set pg = payload.get('postgres') %}
+{% set pl = payload.get('pipeline') %}
+{% set mth = payload.get('mirth') %}
+
+<!-- ── Summary ── -->
+<section class="detail-section">
+  <h2>Summary</h2>
+  <div class="status-grid">
+    <div class="status-item"><span class="status-label">SSH</span><span class="badge badge--{{ snapshot.ssh_status | lower }}">{{ snapshot.ssh_status }}</span></div>
+    <div class="status-item"><span class="status-label">Docker</span><span class="badge badge--{{ snapshot.docker_status | lower }}">{{ snapshot.docker_status }}</span></div>
+    <div class="status-item"><span class="status-label">PostgreSQL</span><span class="badge badge--{{ snapshot.postgres_status | lower }}">{{ snapshot.postgres_status }}</span></div>
+    <div class="status-item"><span class="status-label">Pipeline</span><span class="badge badge--{{ snapshot.pipeline_status | lower }}">{{ snapshot.pipeline_status }}</span></div>
+    <div class="status-item"><span class="status-label">Hardware</span><span class="badge badge--{{ snapshot.hardware_status | lower }}">{{ snapshot.hardware_status }}</span></div>
+    <div class="status-item"><span class="status-label">Mirth</span><span class="badge badge--{{ snapshot.mirth_status | lower }}">{{ snapshot.mirth_status }}</span></div>
+  </div>
+  <div class="detail-meta">Last checked: {{ snapshot.timestamp[:19] if snapshot.timestamp else '—' }}</div>
+  {% if snapshot.error_message %}
+  <div class="alert alert--critical">{{ snapshot.error_message }}</div>
+  {% endif %}
+</section>
+
+<!-- ── Hardware ── -->
+{% if hw %}
+<section class="detail-section">
+  <h2>Hardware</h2>
+  <table class="detail-table">
+    <tr><td>Hostname</td><td>{{ hw.hostname }}</td></tr>
+    <tr><td>Uptime</td><td>{{ hw.uptime }}</td></tr>
+    <tr><td>Load avg (1/5/15m)</td><td>{{ hw.load_1m }} / {{ hw.load_5m }} / {{ hw.load_15m }}</td></tr>
+    <tr><td>Cores</td><td>{{ hw.cores }}</td></tr>
+    <tr><td>RAM Total</td><td>{{ hw.ram_total_mb }} MB</td></tr>
+    <tr><td>RAM Available</td><td>{{ hw.ram_available_mb }} MB ({{ 100 - hw.ram_used_pct if hw.ram_used_pct is not none else '—' }}% free)</td></tr>
+    <tr><td>Swap</td><td>{{ hw.swap_used_mb }}/{{ hw.swap_total_mb }} MB ({{ hw.swap_used_pct }}%)</td></tr>
+    <tr><td>Disk /</td><td>{{ hw.disk_used_pct }}% used — {{ hw.disk_available }} available</td></tr>
+    <tr><td>Temperature</td><td>{% if hw.temp_celsius is not none %}{{ hw.temp_celsius }}°C{% else %}UNKNOWN{% endif %}</td></tr>
+    <tr><td>Throttling</td><td>{{ hw.throttled }}</td></tr>
+  </table>
+</section>
+{% endif %}
+
+<!-- ── Docker containers ── -->
+{% if dk %}
+<section class="detail-section">
+  <h2>Docker Containers</h2>
+  <table class="detail-table detail-table--wide">
+    <thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Ports</th></tr></thead>
+    <tbody>
+    {% for c in dk.containers %}
+    <tr class="{% if c.is_up %}row--ok{% else %}row--critical{% endif %}">
+      <td>{{ c.name }}</td>
+      <td><span class="role-tag role-{{ c.role }}">{{ c.role }}</span></td>
+      <td>{{ c.status }}</td>
+      <td class="ports-cell">{{ c.ports or '—' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<!-- ── Workers ── -->
+<section class="detail-section">
+  <h2>Workers</h2>
+  <p>{{ dk.workers_up }} / {{ dk.workers_total }} workers up
+    <span class="badge badge--{{ dk.workers_status | lower }}">{{ dk.workers_status }}</span>
+  </p>
+  <table class="detail-table detail-table--wide">
+    <thead><tr><th>Name</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for c in dk.containers if c.role == 'worker' %}
+    <tr class="{% if c.is_up %}row--ok{% else %}row--critical{% endif %}">
+      <td>{{ c.name }}</td><td>{{ c.status }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+<!-- ── Mirth ── -->
+{% if mth and mth.present %}
+<section class="detail-section">
+  <h2>Mirth</h2>
+  <p><span class="badge badge--{{ mth.status | lower }}">{{ mth.status }}</span></p>
+  <table class="detail-table">
+    <thead><tr><th>Container</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for c in mth.containers %}
+    <tr class="{% if c.is_up %}row--ok{% else %}row--warning{% endif %}">
+      <td>{{ c.name }}</td><td>{{ c.status }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+<!-- ── PostgreSQL ── -->
+{% if pg %}
+<section class="detail-section">
+  <h2>PostgreSQL</h2>
+  <p>Reachable: <span class="badge badge--{{ pg.status | lower }}">{{ pg.status }}</span></p>
+  {% if pg.error %}<div class="alert alert--warning">{{ pg.error }}</div>{% endif %}
+</section>
+{% endif %}
+
+<!-- ── Pipeline ── -->
+{% if pl and pl.summary %}
+{% set s = pl.summary %}
+<section class="detail-section">
+  <h2>Pipeline</h2>
+  <table class="detail-table">
+    <tr><td>Last successful task</td><td>{{ s.last_successful_task_at or '—' }}</td></tr>
+    <tr><td>Last image created</td><td>{{ s.last_image_created_at or '—' }}</td></tr>
+    <tr><td>Last image updated</td><td>{{ s.last_image_updated_at or '—' }}</td></tr>
+    <tr><td>Not uploaded to cloud</td><td>{{ s.not_uploaded_to_cloud if s.not_uploaded_to_cloud is not none else '—' }}</td></tr>
+    <tr><td>Images last 5m / 15m</td><td>{{ s.images_last_5m or 0 }} / {{ s.images_last_15m or 0 }}</td></tr>
+    <tr><td>Images updated 5m</td><td>{{ s.images_updated_last_5m or 0 }}</td></tr>
+    <tr><td>Pending created 15m</td><td>{{ s.pending_created_15m or 0 }}</td></tr>
+    <tr><td>Processed 15m</td><td>{{ s.processed_15m or 0 }}</td></tr>
+    <tr><td>Failed 15m</td><td class="{% if s.failed_15m %}cell--warning{% endif %}">{{ s.failed_15m or 0 }}</td></tr>
+    <tr><td>Pending total</td><td>{{ s.pending_total or 0 }}</td></tr>
+    <tr><td>Pending >30m</td><td>{{ s.pending_older_30m or 0 }}</td></tr>
+    <tr><td>Pending >2h</td><td class="{% if s.pending_older_2h %}cell--warning{% endif %}">{{ s.pending_older_2h or 0 }}</td></tr>
+  </table>
+</section>
+
+{% if s.backlog_by_type %}
+<section class="detail-section">
+  <h2>Backlog by Type</h2>
+  <table class="detail-table detail-table--wide">
+    <thead><tr><th>Type</th><th>Count</th><th>Oldest</th><th>Last Updated</th></tr></thead>
+    <tbody>
+    {% for row in s.backlog_by_type %}
+    <tr>{% for v in row['values'] %}<td>{{ v }}</td>{% endfor %}</tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if s.failed_last_24h %}
+<section class="detail-section">
+  <h2>Failures Last 24h</h2>
+  <table class="detail-table detail-table--wide">
+    <thead><tr><th>Type</th><th>Count</th><th>Last Failed</th></tr></thead>
+    <tbody>
+    {% for row in s.failed_last_24h %}
+    <tr class="row--warning">{% for v in row['values'] %}<td>{{ v }}</td>{% endfor %}</tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if s.failed_by_type %}
+<section class="detail-section">
+  <h2>Failed Tasks — All Time (Top 10)</h2>
+  <table class="detail-table detail-table--wide">
+    <thead><tr><th>Type</th><th>Count</th><th>Last Failed</th></tr></thead>
+    <tbody>
+    {% for row in s.failed_by_type %}
+    <tr>{% for v in row['values'] %}<td>{{ v }}</td>{% endfor %}</tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if s.processed_by_type_15m %}
+<section class="detail-section">
+  <h2>Processed Last 15m by Type</h2>
+  <table class="detail-table detail-table--wide">
+    <thead><tr><th>Type</th><th>Count</th><th>Last Processed</th></tr></thead>
+    <tbody>
+    {% for row in s.processed_by_type_15m %}
+    <tr class="row--ok">{% for v in row['values'] %}<td>{{ v }}</td>{% endfor %}</tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if s.task_status_counts %}
+<section class="detail-section">
+  <h2>Task Status Counts</h2>
+  <table class="detail-table">
+    <thead><tr><th>Status Code</th><th>Count</th></tr></thead>
+    <tbody>
+    {% for row in s.task_status_counts %}
+    <tr>{% for v in row['values'] %}<td>{{ v }}</td>{% endfor %}</tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if s.study_processing_status %}
+<section class="detail-section">
+  <h2>Study Processing Status</h2>
+  <table class="detail-table">
+    <thead><tr><th>Status</th><th>Count</th></tr></thead>
+    <tbody>
+    {% for row in s.study_processing_status %}
+    <tr>{% for v in row['values'] %}<td>{{ v }}</td>{% endfor %}</tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if s.series_processing_status %}
+<section class="detail-section">
+  <h2>Series Processing Status</h2>
+  <table class="detail-table">
+    <thead><tr><th>Status</th><th>Count</th></tr></thead>
+    <tbody>
+    {% for row in s.series_processing_status %}
+    <tr>{% for v in row['values'] %}<td>{{ v }}</td>{% endfor %}</tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+{% endif %}
+
+<!-- ── History ── -->
+<section class="detail-section">
+  <h2>Recent Snapshots</h2>
+  <table class="detail-table detail-table--wide">
+    <thead><tr><th>Timestamp</th><th>Status</th><th>Score</th><th>SSH</th></tr></thead>
+    <tbody>
+    {% for snap in history %}
+    <tr class="row--{{ snap.overall_status | lower }}">
+      <td>{{ snap.timestamp[:19] }}</td>
+      <td><span class="badge badge--{{ snap.overall_status | lower }}">{{ snap.overall_status }}</span></td>
+      <td>{{ snap.health_score }}</td>
+      <td><span class="badge badge--{{ snap.ssh_status | lower }}">{{ snap.ssh_status }}</span></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

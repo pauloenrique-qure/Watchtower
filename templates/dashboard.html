@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Watchtower — Dashboard{% endblock %}
+
+{% block scheduler_controls %}
+<div class="controls-bar">
+  {% if not teleport_active %}
+  <div class="alert alert--critical">
+    Teleport session expired or not active.
+    Run: <code>tsh login --proxy=teleport.qure.ai --user=&lt;your-user&gt;</code>
+  </div>
+  {% endif %}
+  <div class="controls-actions">
+    <button class="btn btn--primary" onclick="triggerCheck()">&#9654; Run Now</button>
+    <button class="btn btn--secondary" id="pause-btn" onclick="toggleScheduler()">⏸ Pause</button>
+    <span class="controls-info">
+      Last run: <span id="last-run">{{ scheduler.last_run or '—' }}</span> &nbsp;|&nbsp;
+      Next: <span id="next-run">{{ scheduler.next_run or '—' }}</span>
+    </span>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="summary-bar" id="summary-bar">
+  <div class="summary-stat" id="stat-ok">— OK</div>
+  <div class="summary-stat" id="stat-warning">— WARN</div>
+  <div class="summary-stat" id="stat-critical">— CRIT</div>
+  <div class="summary-stat" id="stat-unknown">— UNKN</div>
+</div>
+
+<div class="gateway-grid" id="gateway-grid">
+  {% for gw in gateways %}
+  <div class="gateway-card status-{{ gw.overall_status | lower }}" id="card-{{ gw.host | replace('.', '-') }}" onclick="window.location='/gateway/{{ gw.host }}'">
+    <div class="card-header">
+      <span class="card-name">{{ gw.name }}</span>
+      <span class="card-score {% if gw.health_score is not none %}score-{{ (gw.health_score // 20) * 20 }}{% endif %}">
+        {% if gw.health_score is not none %}{{ gw.health_score }}{% else %}—{% endif %}
+      </span>
+    </div>
+    <div class="card-host">{{ gw.host }}</div>
+
+    <div class="card-badges">
+      <span class="badge badge--{{ gw.ssh_status | lower }}">SSH</span>
+      <span class="badge badge--{{ gw.docker_status | lower }}">Docker</span>
+      <span class="badge badge--{{ gw.postgres_status | lower }}">PG</span>
+      <span class="badge badge--{{ gw.pipeline_status | lower }}">Pipeline</span>
+      {% if gw.payload.mirth and gw.payload.mirth.present %}
+      <span class="badge badge--{{ gw.mirth_status | lower }}">Mirth</span>
+      {% endif %}
+    </div>
+
+    <div class="card-metrics">
+      {% set hw = gw.payload.get('hardware') %}
+      {% set pl = gw.payload.get('pipeline') %}
+      {% set dk = gw.payload.get('docker') %}
+
+      {% if hw %}
+      <div class="metric-row">
+        <span class="metric-label">Load</span>
+        <span class="metric-value">{{ hw.load_1m }}/{{ hw.load_5m }}/{{ hw.load_15m }}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">RAM</span>
+        <span class="metric-value">{{ hw.ram_available_mb }}MB avail</span>
+      </div>
+      {% if hw.swap_used_pct is not none %}
+      <div class="metric-row">
+        <span class="metric-label">Swap</span>
+        <span class="metric-value">{{ hw.swap_used_pct }}%</span>
+      </div>
+      {% endif %}
+      <div class="metric-row">
+        <span class="metric-label">Disk /</span>
+        <span class="metric-value">{{ hw.disk_used_pct }}%</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Temp</span>
+        <span class="metric-value">{% if hw.temp_celsius is not none %}{{ hw.temp_celsius }}°C{% else %}UNKNOWN{% endif %}</span>
+      </div>
+      {% endif %}
+
+      {% if dk %}
+      <div class="metric-row">
+        <span class="metric-label">Workers</span>
+        <span class="metric-value">{{ dk.workers_up }}/{{ dk.workers_total }} up</span>
+      </div>
+      {% endif %}
+
+      {% if pl and pl.summary %}
+      {% set s = pl.summary %}
+      <div class="metric-row">
+        <span class="metric-label">Img 15m</span>
+        <span class="metric-value">{{ s.images_last_15m if s.images_last_15m is not none else '—' }}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Proc 15m</span>
+        <span class="metric-value">{{ s.processed_15m if s.processed_15m is not none else '—' }}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Failed 15m</span>
+        <span class="metric-value {% if s.failed_15m %}metric--warning{% endif %}">
+          {{ s.failed_15m if s.failed_15m is not none else '—' }}
+        </span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Pending &gt;2h</span>
+        <span class="metric-value {% if s.pending_older_2h %}metric--warning{% endif %}">
+          {{ s.pending_older_2h if s.pending_older_2h is not none else '—' }}
+        </span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Last task</span>
+        <span class="metric-value metric--small">{{ s.last_successful_task_at[:19] if s.last_successful_task_at else '—' }}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Last image</span>
+        <span class="metric-value metric--small">{{ s.last_image_created_at[:19] if s.last_image_created_at else '—' }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="card-footer">
+      <span class="status-dot status-dot--{{ gw.overall_status | lower }}"></span>
+      <span class="overall-status">{{ gw.overall_status }}</span>
+      <span class="last-seen">{{ gw.timestamp[:19] if gw.timestamp else 'never' }}</span>
+    </div>
+
+    {% if gw.error_message %}
+    <div class="card-error">{{ gw.error_message[:120] }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  initDashboard({ refreshInterval: 30000 });
+</script>
+{% endblock %}
