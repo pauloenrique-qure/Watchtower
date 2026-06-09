@@ -6,6 +6,20 @@ class TeleportError(Exception):
     pass
 
 
+def _sanitize_error(stderr: str) -> str:
+    s = stderr.lower()
+    if "reverse tunnel" in s or "no tunnel connection" in s:
+        return "Teleport agent disconnected"
+    if "node not found" in s or "no such host" in s:
+        return "Node not found in cluster"
+    if "connection refused" in s or "dial tcp" in s:
+        return "Connection refused"
+    if "permission denied" in s:
+        return "Permission denied"
+    first_line = stderr.strip().splitlines()[0] if stderr.strip() else "Unknown error"
+    return first_line[:80]
+
+
 class SessionExpiredError(TeleportError):
     pass
 
@@ -30,7 +44,7 @@ class TeleportAdapter:
             stderr = result.stderr.lower()
             if any(kw in stderr for kw in ("expired", "not logged in", "no credentials")):
                 raise SessionExpiredError(result.stderr.strip())
-            raise TeleportError(result.stderr.strip() or f"exit code {result.returncode}")
+            raise TeleportError(_sanitize_error(result.stderr))
 
         return result.stdout
 
