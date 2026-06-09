@@ -158,10 +158,12 @@ def _enrich_snapshot(row: dict | None, gw: GatewayConfig | None) -> dict:
             "mirth_status": "UNKNOWN",
             "timestamp": None,
             "error_message": "",
+            "uptime_short": "",
             "payload": {},
         }
 
     payload = json.loads(row.get("payload_json", "{}"))
+    hw = payload.get("hardware") or {}
     return {
         "name": gw.name if gw else row["gateway_host"],
         "host": row["gateway_host"],
@@ -176,5 +178,6 @@ def _enrich_snapshot(row: dict | None, gw: GatewayConfig | None) -> dict:
         "mirth_status": row["mirth_status"],
         "timestamp": row["timestamp"],
         "error_message": row.get("error_message", ""),
+        "uptime_short": hw.get("uptime_short", ""),
         "payload": payload,
     }

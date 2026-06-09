@@ -33,9 +33,7 @@
   <div class="gateway-card status-{{ gw.overall_status | lower }}" id="card-{{ gw.host | replace('.', '-') }}" onclick="window.location='/gateway/{{ gw.host }}'">
     <div class="card-header">
       <span class="card-name">{{ gw.name }}</span>
-      <span class="card-score {% if gw.health_score is not none %}score-{{ (gw.health_score // 20) * 20 }}{% endif %}">
-        {% if gw.health_score is not none %}{{ gw.health_score }}{% else %}—{% endif %}
-      </span>
+      <span class="card-uptime">{{ gw.uptime_short or '—' }}</span>
     </div>
     <div class="card-host">{{ gw.host }}</div>
 

@@ -100,14 +100,9 @@
     const status = (gw.overall_status || "unknown").toLowerCase();
     card.className = "gateway-card status-" + status;
 
-    // score
-    const scoreEl = card.querySelector(".card-score");
-    if (scoreEl) {
-      const score = gw.health_score;
-      scoreEl.textContent = score !== null && score !== undefined ? score : "—";
-      const cls = score !== null && score !== undefined ? "score-" + Math.floor(score / 20) * 20 : "";
-      scoreEl.className = "card-score " + cls;
-    }
+    // uptime
+    const uptimeEl = card.querySelector(".card-uptime");
+    if (uptimeEl) uptimeEl.textContent = gw.uptime_short || "—";
 
     // badges
     setBadge(card, ".card-badges .badge:nth-child(1)", gw.ssh_status);

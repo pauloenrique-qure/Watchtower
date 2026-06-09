@@ -1,4 +1,5 @@
 from __future__ import annotations
+import re
 from app.models import HardwareResult, Status, GatewayConfig
 from app.teleport.adapter import TeleportAdapter, TeleportError
 
@@ -31,6 +32,7 @@ def run(gw: GatewayConfig, teleport: TeleportAdapter) -> HardwareResult:
         sections = _split_sections(output)
         result.hostname = sections.get("HOSTNAME", "").strip()
         result.uptime = sections.get("UPTIME", "").strip()
+        result.uptime_short = _parse_uptime_short(result.uptime)
         _parse_loadavg(result, sections.get("LOADAVG", ""))
         _parse_cores(result, sections.get("NPROC", ""))
         _parse_memory(result, sections.get("MEMORY", ""))
@@ -42,6 +44,28 @@ def run(gw: GatewayConfig, teleport: TeleportAdapter) -> HardwareResult:
         result.status = Status.CRITICAL
         result.error = str(e)
     return result
+
+
+def _parse_uptime_short(uptime_str: str) -> str:
+    match = re.search(r'up\s+(.*?),\s+\d+\s+user', uptime_str)
+    if not match:
+        return ""
+    raw = match.group(1).strip()
+
+    m = re.match(r'(\d+)\s+day', raw)
+    if m:
+        return f"↑ {m.group(1)}d"
+
+    m = re.match(r'(\d+):(\d+)', raw)
+    if m:
+        h = int(m.group(1))
+        return f"↑ {h}h" if h else f"↑ {m.group(2)}m"
+
+    m = re.match(r'(\d+)\s+min', raw)
+    if m:
+        return f"↑ {m.group(1)}m"
+
+    return f"↑ {raw}"
 
 
 def _split_sections(output: str) -> dict[str, str]:

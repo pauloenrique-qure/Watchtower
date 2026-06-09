@@ -54,6 +54,7 @@ class HardwareResult(BaseModel):
     disk_available: str = ""
     temp_celsius: float | None = None
     throttled: str = "UNKNOWN"
+    uptime_short: str = ""
     error: str = ""
 
 

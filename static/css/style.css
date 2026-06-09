@@ -186,15 +186,12 @@ a:hover { text-decoration: underline; }
   color: var(--text);
 }
 
-.card-score {
-  font-size: 22px;
-  font-weight: 800;
+.card-uptime {
+  font-size: 13px;
+  font-weight: 700;
   color: var(--text-muted);
+  letter-spacing: 0.3px;
 }
-.score-80, .score-100 { color: var(--ok); }
-.score-60             { color: #5aad5e; }
-.score-40             { color: var(--warning); }
-.score-20, .score-0   { color: var(--critical); }
 
 .card-host {
   color: var(--text-muted);
