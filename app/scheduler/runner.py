@@ -2,6 +2,7 @@ from __future__ import annotations
 import threading
 import time
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
 from app.models import (
@@ -16,6 +17,9 @@ from app.storage import sqlite as db
 logger = logging.getLogger("watchtower.scheduler")
 
 
+_FLAP_THRESHOLD = 2  # consecutive SSH failures before marking CRITICAL
+
+
 class Scheduler:
     def __init__(self, gateways: list[GatewayConfig], interval_seconds: int, teleport: TeleportAdapter):
         self._gateways = gateways
@@ -25,6 +29,8 @@ class Scheduler:
         self._lock = threading.Lock()
         self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
+        self._failure_counts: dict[str, int] = {}
+        self._counts_lock = threading.Lock()
 
     @property
     def state(self) -> SchedulerState:
@@ -84,17 +90,34 @@ class Scheduler:
                 self._state.in_progress = False
                 return
 
-            for gw in self._gateways:
-                try:
-                    snapshot = _check_gateway(gw, self._teleport)
-                    db.save_snapshot(snapshot)
-                    logger.info("Gateway %s → %s (score=%d)", gw.name, snapshot.overall_status, snapshot.health_score)
-                except Exception as exc:
-                    logger.error("Unexpected error checking %s: %s", gw.name, exc)
+            with ThreadPoolExecutor(max_workers=len(self._gateways)) as pool:
+                futures = {pool.submit(self._check_and_save, gw): gw for gw in self._gateways}
+                for future in as_completed(futures):
+                    exc = future.exception()
+                    if exc:
+                        logger.error("Unexpected error checking %s: %s", futures[future].name, exc)
 
             self._state.last_run = datetime.now(tz=timezone.utc).isoformat()
         finally:
             self._state.in_progress = False
+
+    def _check_and_save(self, gw: GatewayConfig) -> None:
+        snapshot = _check_gateway(gw, self._teleport)
+        if snapshot.ssh_status == Status.CRITICAL:
+            with self._counts_lock:
+                self._failure_counts[gw.host] = self._failure_counts.get(gw.host, 0) + 1
+                count = self._failure_counts[gw.host]
+            if count < _FLAP_THRESHOLD:
+                logger.warning(
+                    "Gateway %s SSH failure #%d/%d — suppressed (flap protection)",
+                    gw.name, count, _FLAP_THRESHOLD,
+                )
+                return
+        else:
+            with self._counts_lock:
+                self._failure_counts[gw.host] = 0
+        db.save_snapshot(snapshot)
+        logger.info("Gateway %s → %s (score=%d)", gw.name, snapshot.overall_status, snapshot.health_score)
 
 
 def _check_gateway(gw: GatewayConfig, teleport: TeleportAdapter) -> GatewaySnapshot:
