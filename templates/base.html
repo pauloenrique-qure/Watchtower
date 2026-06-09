@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Watchtower{% endblock %}</title>
-  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/style.css?v={{ static_version }}">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -25,7 +25,7 @@
     {% block content %}{% endblock %}
   </main>
 
-  <script src="/static/js/dashboard.js"></script>
+  <script src="/static/js/dashboard.js?v={{ static_version }}"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

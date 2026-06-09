@@ -1,4 +1,5 @@
 from __future__ import annotations
+import hashlib
 import logging
 from contextlib import asynccontextmanager
 
@@ -19,6 +20,15 @@ logging.basicConfig(
 logger = logging.getLogger("watchtower")
 
 _STATIC_DIR = Path(__file__).parent.parent / "static"
+
+
+def _static_version() -> str:
+    files = sorted(_STATIC_DIR.rglob("*") )
+    h = hashlib.md5()
+    for f in files:
+        if f.is_file():
+            h.update(f.read_bytes())
+    return h.hexdigest()[:8]
 
 
 @asynccontextmanager
@@ -49,4 +59,10 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Watchtower", lifespan=lifespan)
     app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
     app.include_router(routes.router)
+
+    version = _static_version()
+    from app.web.routes import templates
+    templates.env.globals["static_version"] = version
+    logger.info("Static version: %s", version)
+
     return app
