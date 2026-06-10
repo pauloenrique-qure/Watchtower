@@ -41,8 +41,7 @@ async def dashboard(request: Request):
         snapshot = _enrich_snapshot(row, gw)
         gateway_data.append(snapshot)
 
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "dashboard.html", {
         "gateways": gateway_data,
         "teleport_active": tsh["active"],
         "scheduler": sched,
@@ -56,8 +55,7 @@ async def gateway_detail(request: Request, host: str):
     history = db.get_history(host, limit=50)
     snapshot = _enrich_snapshot(row, gw) if gw else {}
 
-    return templates.TemplateResponse("gateway_detail.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "gateway_detail.html", {
         "gw": gw,
         "snapshot": snapshot,
         "history": history,
