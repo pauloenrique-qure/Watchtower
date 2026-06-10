@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import json
 from pathlib import Path
 from fastapi import APIRouter, Request
@@ -31,8 +32,8 @@ def init(gateways: list[GatewayConfig], teleport: TeleportAdapter, scheduler) ->
 
 @router.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    tsh = _teleport.status()
-    latest = db.get_latest_all()
+    tsh = await asyncio.to_thread(_teleport.status)
+    latest = await asyncio.to_thread(db.get_latest_all)
     sched = _scheduler.state if _scheduler else None
 
     gateway_data = []
@@ -51,8 +52,8 @@ async def dashboard(request: Request):
 @router.get("/gateway/{host:path}", response_class=HTMLResponse)
 async def gateway_detail(request: Request, host: str):
     gw = _find_gateway(host)
-    row = db.get_latest_snapshot(host)
-    history = db.get_history(host, limit=50)
+    row = await asyncio.to_thread(db.get_latest_snapshot, host)
+    history = await asyncio.to_thread(db.get_history, host, 50)
     snapshot = _enrich_snapshot(row, gw) if gw else {}
 
     return templates.TemplateResponse(request, "gateway_detail.html", {
@@ -66,8 +67,8 @@ async def gateway_detail(request: Request, host: str):
 
 @router.get("/api/status")
 async def api_status():
-    tsh = _teleport.status()
-    latest = db.get_latest_all()
+    tsh = await asyncio.to_thread(_teleport.status)
+    latest = await asyncio.to_thread(db.get_latest_all)
     sched = _scheduler.state if _scheduler else None
 
     result = []
@@ -84,7 +85,7 @@ async def api_status():
 
 @router.get("/api/gateway/{host:path}")
 async def api_gateway(host: str):
-    row = db.get_latest_snapshot(host)
+    row = await asyncio.to_thread(db.get_latest_snapshot, host)
     if not row:
         return JSONResponse({"error": "not found"}, status_code=404)
     payload = json.loads(row.get("payload_json", "{}"))
@@ -93,7 +94,7 @@ async def api_gateway(host: str):
 
 @router.get("/api/history/{host:path}")
 async def api_history(host: str):
-    history = db.get_history(host, limit=50)
+    history = await asyncio.to_thread(db.get_history, host, 50)
     return JSONResponse([
         {
             "timestamp": r["timestamp"],
@@ -107,7 +108,7 @@ async def api_history(host: str):
 
 @router.get("/api/teleport/status")
 async def api_teleport_status():
-    tsh = _teleport.status()
+    tsh = await asyncio.to_thread(_teleport.status)
     return JSONResponse({"active": tsh["active"], "output": tsh["output"]})
 
 

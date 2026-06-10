@@ -1,12 +1,11 @@
 from __future__ import annotations
 from app.models import PostgresResult, Status, GatewayConfig
 from app.teleport.adapter import TeleportAdapter, TeleportError
+from app.teleport import commands
 
-_PSQL_SUDO = "sudo docker exec -i postgres_dcmio psql -U postgres -d dcmio -t -A -F '|'"
-_PSQL_NOSU = "docker exec -i postgres_dcmio psql -U postgres -d dcmio -t -A -F '|'"
 _PROBE_QUERY = "SELECT 1"
 
-# Per-host cache: once we know which command works, reuse it.
+# Per-host cache: once we know which base command works, reuse it.
 _cmd_cache: dict[str, str] = {}
 
 
@@ -23,17 +22,26 @@ def run(gw: GatewayConfig, teleport: TeleportAdapter) -> PostgresResult:
 
 
 def psql(gw: GatewayConfig, teleport: TeleportAdapter, query: str) -> str:
-    safe = query.replace("'", "'\\''")
+    if query != _PROBE_QUERY:
+        raise ValueError("psql() only runs the connectivity probe — use run_batch() for batch SQL")
     base = _resolve_cmd(gw, teleport)
-    cmd = f"{base} -c '{safe}'"
-    return teleport.ssh(gw.host, gw.ssh_login, cmd)
+    cmd = commands.PSQL_PROBE_CMD if base == commands.PSQL_BASE else commands.PSQL_PROBE_CMD_SUDO
+    try:
+        return teleport.ssh(gw.host, gw.ssh_login, cmd)
+    except TeleportError:
+        _cmd_cache.pop(gw.host, None)
+        raise
 
 
-def psql_raw(gw: GatewayConfig, teleport: TeleportAdapter, sql_block: str) -> str:
-    escaped = sql_block.replace("'", "'\\''")
+def run_batch(gw: GatewayConfig, teleport: TeleportAdapter) -> str:
+    """Execute the pre-approved pipeline batch SQL and return raw psql output."""
     base = _resolve_cmd(gw, teleport)
-    cmd = f"echo '{escaped}' | {base}"
-    return teleport.ssh(gw.host, gw.ssh_login, cmd)
+    cmd = commands.build_pipeline_batch(base)
+    try:
+        return teleport.ssh(gw.host, gw.ssh_login, cmd)
+    except TeleportError:
+        _cmd_cache.pop(gw.host, None)
+        raise
 
 
 def _resolve_cmd(gw: GatewayConfig, teleport: TeleportAdapter) -> str:
@@ -41,16 +49,18 @@ def _resolve_cmd(gw: GatewayConfig, teleport: TeleportAdapter) -> str:
     if gw.host in _cmd_cache:
         return _cmd_cache[gw.host]
 
-    for candidate in (_PSQL_NOSU, _PSQL_SUDO):
+    for probe_cmd, base in (
+        (commands.PSQL_PROBE_CMD, commands.PSQL_BASE),
+        (commands.PSQL_PROBE_CMD_SUDO, commands.PSQL_BASE_SUDO),
+    ):
         try:
-            safe = _PROBE_QUERY.replace("'", "'\\''")
-            out = teleport.ssh(gw.host, gw.ssh_login, f"{candidate} -c '{safe}'")
+            out = teleport.ssh(gw.host, gw.ssh_login, probe_cmd)
             if "1" in out:
-                _cmd_cache[gw.host] = candidate
-                return candidate
+                _cmd_cache[gw.host] = base
+                return base
         except TeleportError:
             continue
 
     # Neither worked — default to sudo so the error message is descriptive
-    _cmd_cache[gw.host] = _PSQL_SUDO
-    return _PSQL_SUDO
+    _cmd_cache[gw.host] = commands.PSQL_BASE_SUDO
+    return commands.PSQL_BASE_SUDO

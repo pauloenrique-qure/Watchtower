@@ -21,10 +21,17 @@ _FLAP_THRESHOLD = 2  # consecutive SSH failures before marking CRITICAL
 
 
 class Scheduler:
-    def __init__(self, gateways: list[GatewayConfig], interval_seconds: int, teleport: TeleportAdapter):
+    def __init__(
+        self,
+        gateways: list[GatewayConfig],
+        interval_seconds: int,
+        teleport: TeleportAdapter,
+        gateway_max_timeout: int = 60,
+    ):
         self._gateways = gateways
         self._interval = interval_seconds
         self._teleport = teleport
+        self._gateway_max_timeout = gateway_max_timeout
         self._state = SchedulerState()
         self._lock = threading.Lock()
         self._thread: threading.Thread | None = None
@@ -44,6 +51,8 @@ class Scheduler:
 
     def stop(self) -> None:
         self._stop_event.set()
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=self._gateway_max_timeout + 5)
         logger.info("Scheduler stopped")
 
     def pause(self) -> None:
@@ -84,18 +93,35 @@ class Scheduler:
             self._state.in_progress = True
 
         try:
+            db.purge_old_snapshots()
+
             tsh = self._teleport.status()
             if not tsh["active"]:
                 logger.warning("Teleport session expired — skipping checks")
-                self._state.in_progress = False
                 return
 
-            with ThreadPoolExecutor(max_workers=len(self._gateways)) as pool:
-                futures = {pool.submit(self._check_and_save, gw): gw for gw in self._gateways}
-                for future in as_completed(futures):
+            if not self._gateways:
+                logger.warning("No gateways configured — skipping check cycle")
+                return
+
+            pool = ThreadPoolExecutor(max_workers=len(self._gateways))
+            futures = {pool.submit(self._check_and_save, gw): gw for gw in self._gateways}
+            try:
+                for future in as_completed(futures, timeout=self._gateway_max_timeout):
                     exc = future.exception()
                     if exc:
                         logger.error("Unexpected error checking %s: %s", futures[future].name, exc)
+                pool.shutdown(wait=False)
+            except TimeoutError:
+                logger.error(
+                    "Check cycle timed out after %ds — abandoning remaining gateways",
+                    self._gateway_max_timeout,
+                )
+                # cancel_futures=True cancels queued futures that haven't started.
+                # Threads already running cannot be interrupted in Python — they
+                # will complete on their own and may still write a snapshot after
+                # in_progress returns to False. This is an accepted tradeoff.
+                pool.shutdown(wait=False, cancel_futures=True)
 
             self._state.last_run = datetime.now(tz=timezone.utc).isoformat()
         finally:
@@ -145,7 +171,7 @@ def _check_gateway(gw: GatewayConfig, teleport: TeleportAdapter) -> GatewaySnaps
     dk = docker.run(gw, teleport)
     mth = mirth.run(dk)
 
-    if dk.status != Status.CRITICAL or dk.core_status != Status.CRITICAL:
+    if dk.core_status != Status.CRITICAL:
         pg = postgres.run(gw, teleport)
 
     if pg and pg.reachable:

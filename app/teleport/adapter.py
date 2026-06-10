@@ -1,5 +1,6 @@
 from __future__ import annotations
 import subprocess
+from app.teleport.commands import validate as _validate_command
 
 
 class TeleportError(Exception):
@@ -37,6 +38,7 @@ class TeleportAdapter:
         return {"active": active, "output": result.stdout, "error": result.stderr}
 
     def ssh(self, host: str, login: str, command: str, timeout: int | None = None) -> str:
+        _validate_command(command)
         effective_timeout = timeout or self._cmd_timeout
         target = f"{login}@{host}"
         args = ["tsh", "ssh", target, command]

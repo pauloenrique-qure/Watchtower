@@ -43,7 +43,7 @@ async def lifespan(app: FastAPI):
         command_timeout=app_cfg.remote_command_timeout,
     )
 
-    scheduler = Scheduler(gateways, app_cfg.check_interval_seconds, teleport)
+    scheduler = Scheduler(gateways, app_cfg.check_interval_seconds, teleport, app_cfg.gateway_max_timeout)
     routes.init(gateways, teleport, scheduler)
 
     scheduler.start()

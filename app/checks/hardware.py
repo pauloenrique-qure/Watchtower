@@ -2,27 +2,7 @@ from __future__ import annotations
 import re
 from app.models import HardwareResult, Status, GatewayConfig
 from app.teleport.adapter import TeleportAdapter, TeleportError
-
-# All hardware data in a single SSH connection using a section-delimited script.
-# Each section is separated by a unique marker so parsing is unambiguous.
-_BATCH_SCRIPT = r"""
-echo '---HOSTNAME---'
-hostname
-echo '---UPTIME---'
-uptime
-echo '---LOADAVG---'
-cat /proc/loadavg
-echo '---NPROC---'
-nproc
-echo '---MEMORY---'
-free -m
-echo '---DISK---'
-df -h /
-echo '---TEMP---'
-cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null || vcgencmd measure_temp 2>/dev/null || echo 'UNKNOWN'
-echo '---THROTTLE---'
-vcgencmd get_throttled 2>/dev/null || echo 'UNKNOWN'
-"""
+from app.teleport.commands import HARDWARE_BATCH as _BATCH_SCRIPT
 
 
 def run(gw: GatewayConfig, teleport: TeleportAdapter) -> HardwareResult:

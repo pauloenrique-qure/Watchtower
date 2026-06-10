@@ -101,6 +101,6 @@ def get_history(host: str, limit: int = 50) -> list[dict]:
 def purge_old_snapshots(keep_days: int = 7) -> None:
     with get_connection() as conn:
         conn.execute(
-            "DELETE FROM snapshots WHERE timestamp < datetime('now', ?)",
+            "DELETE FROM snapshots WHERE datetime(timestamp) < datetime('now', ?)",
             (f"-{keep_days} days",),
         )

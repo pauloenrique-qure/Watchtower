@@ -1,73 +1,7 @@
 from __future__ import annotations
 from app.models import PipelineResult, PipelineSummary, Status, GatewayConfig
 from app.teleport.adapter import TeleportAdapter, TeleportError
-from app.checks.postgres import psql_raw
-
-# All queries in one psql session separated by unique markers.
-# psql outputs the marker SELECT as a literal row, giving us section boundaries.
-_BATCH_SQL = r"""
-SELECT '---LAST_TASK---';
-SELECT MAX(processed_at) FROM job_manager_task WHERE status = 2;
-
-SELECT '---IMAGE_SUMMARY---';
-SELECT MAX(created_at), MAX(updated_at),
-  COUNT(*) FILTER (WHERE is_uploaded_to_cloud = false)
-FROM image_manager_image;
-
-SELECT '---IMAGES_RECENT---';
-SELECT
-  COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '5 minutes'),
-  COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '15 minutes'),
-  COUNT(*) FILTER (WHERE updated_at >= NOW() - INTERVAL '5 minutes')
-FROM image_manager_image;
-
-SELECT '---TASKS_RECENT---';
-SELECT
-  COUNT(*) FILTER (WHERE status = 0 AND created_at >= NOW() - INTERVAL '15 minutes'),
-  COUNT(*) FILTER (WHERE status = 2 AND processed_at >= NOW() - INTERVAL '15 minutes'),
-  COUNT(*) FILTER (WHERE status = -1 AND updated_at >= NOW() - INTERVAL '15 minutes')
-FROM job_manager_task;
-
-SELECT '---BACKLOG---';
-SELECT
-  COUNT(*) FILTER (WHERE status = 0),
-  COUNT(*) FILTER (WHERE status = 0 AND created_at < NOW() - INTERVAL '30 minutes'),
-  COUNT(*) FILTER (WHERE status = 0 AND created_at < NOW() - INTERVAL '2 hours')
-FROM job_manager_task;
-
-SELECT '---BACKLOG_BY_TYPE---';
-SELECT type, COUNT(*), MIN(created_at), MAX(updated_at)
-FROM job_manager_task WHERE status = 0
-GROUP BY type ORDER BY COUNT(*) DESC LIMIT 10;
-
-SELECT '---FAILED_BY_TYPE---';
-SELECT type, COUNT(*), MAX(updated_at)
-FROM job_manager_task WHERE status = -1
-GROUP BY type ORDER BY COUNT(*) DESC LIMIT 10;
-
-SELECT '---FAILED_24H---';
-SELECT type, COUNT(*), MAX(updated_at)
-FROM job_manager_task WHERE status = -1
-  AND updated_at >= NOW() - INTERVAL '24 hours'
-GROUP BY type ORDER BY COUNT(*) DESC;
-
-SELECT '---PROCESSED_15M---';
-SELECT type, COUNT(*), MAX(processed_at)
-FROM job_manager_task WHERE status = 2
-  AND processed_at >= NOW() - INTERVAL '15 minutes'
-GROUP BY type ORDER BY COUNT(*) DESC;
-
-SELECT '---TASK_STATUS_COUNTS---';
-SELECT status, COUNT(*) FROM job_manager_task GROUP BY status ORDER BY status;
-
-SELECT '---STUDY_STATUS---';
-SELECT processing_status, COUNT(*)
-FROM image_manager_imagestudy GROUP BY processing_status ORDER BY processing_status;
-
-SELECT '---SERIES_STATUS---';
-SELECT processing_status, COUNT(*)
-FROM image_manager_imageseries GROUP BY processing_status ORDER BY processing_status;
-"""
+from app.checks.postgres import run_batch
 
 
 def run(gw: GatewayConfig, teleport: TeleportAdapter) -> PipelineResult:
@@ -75,7 +9,7 @@ def run(gw: GatewayConfig, teleport: TeleportAdapter) -> PipelineResult:
     summary = PipelineSummary()
 
     try:
-        raw = psql_raw(gw, teleport, _BATCH_SQL)
+        raw = run_batch(gw, teleport)
         sections = _split_sections(raw)
         _parse_last_task(summary, sections.get("LAST_TASK", ""))
         _parse_image_summary(summary, sections.get("IMAGE_SUMMARY", ""))

@@ -1,11 +1,9 @@
 from __future__ import annotations
 from app.models import DockerResult, ContainerInfo, Status, GatewayConfig
 from app.teleport.adapter import TeleportAdapter, TeleportError
+from app.teleport.commands import DOCKER_PS as _DOCKER_PS, DOCKER_PS_SUDO as _DOCKER_PS_SUDO
 
 CORE_CONTAINERS = {"dicom_server", "web_server", "postgres_dcmio"}
-
-
-_DOCKER_PS = 'docker ps --format "{{.Names}}|{{.Status}}|{{.Ports}}"'
 
 
 def run(gw: GatewayConfig, teleport: TeleportAdapter) -> DockerResult:
@@ -26,7 +24,7 @@ def run(gw: GatewayConfig, teleport: TeleportAdapter) -> DockerResult:
 def _try_docker_ps(gw: GatewayConfig, teleport: TeleportAdapter) -> tuple[str | None, str]:
     """Try sudo docker first, fall back to docker without sudo."""
     last_error = ""
-    for cmd in (f"sudo {_DOCKER_PS}", _DOCKER_PS):
+    for cmd in (_DOCKER_PS_SUDO, _DOCKER_PS):
         try:
             return teleport.ssh(gw.host, gw.ssh_login, cmd), ""
         except TeleportError as e:
