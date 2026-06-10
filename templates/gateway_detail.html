@@ -128,7 +128,8 @@
     <tr><td>Last image created</td><td>{{ s.last_image_created_at or '—' }}</td></tr>
     <tr><td>Last image updated</td><td>{{ s.last_image_updated_at or '—' }}</td></tr>
     <tr><td>Not uploaded to cloud</td><td>{{ s.not_uploaded_to_cloud if s.not_uploaded_to_cloud is not none else '—' }}</td></tr>
-    <tr><td>Images last 5m / 15m</td><td>{{ s.images_last_5m or 0 }} / {{ s.images_last_15m or 0 }}</td></tr>
+    <tr><td>Images last 5m / 15m / 24h</td><td>{{ s.images_last_5m or 0 }} / {{ s.images_last_15m or 0 }} / {{ s.images_last_24h if s.images_last_24h is not none else '—' }}</td></tr>
+    <tr><td>SC published to PACS 24h</td><td>{{ s.sc_published_24h if s.sc_published_24h is not none else '—' }}</td></tr>
     <tr><td>Images updated 5m</td><td>{{ s.images_updated_last_5m or 0 }}</td></tr>
     <tr><td>Pending created 15m</td><td>{{ s.pending_created_15m or 0 }}</td></tr>
     <tr><td>Processed 15m</td><td>{{ s.processed_15m or 0 }}</td></tr>

@@ -67,7 +67,8 @@ _PIPELINE_BATCH_SQL = (
     "SELECT\n"
     "  COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '5 minutes'),\n"
     "  COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '15 minutes'),\n"
-    "  COUNT(*) FILTER (WHERE updated_at >= NOW() - INTERVAL '5 minutes')\n"
+    "  COUNT(*) FILTER (WHERE updated_at >= NOW() - INTERVAL '5 minutes'),\n"
+    "  COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours')\n"
     "FROM image_manager_image;\n"
     "\n"
     "SELECT '---TASKS_RECENT---';\n"
@@ -116,6 +117,13 @@ _PIPELINE_BATCH_SQL = (
     "SELECT '---SERIES_STATUS---';\n"
     "SELECT processing_status, COUNT(*)\n"
     "FROM image_manager_imageseries GROUP BY processing_status ORDER BY processing_status;\n"
+    "\n"
+    "SELECT '---SC_PUBLISH_24H---';\n"
+    "SELECT COUNT(*)\n"
+    "FROM job_manager_task\n"
+    "WHERE status = 2\n"
+    "  AND type = 'workflow_manager.publishing.publishers.dicom_publisher.DicomPublisher:publish'\n"
+    "  AND processed_at >= NOW() - INTERVAL '24 hours';\n"
 )
 
 _PIPELINE_B64 = base64.b64encode(_PIPELINE_BATCH_SQL.encode()).decode()

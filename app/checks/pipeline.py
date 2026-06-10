@@ -23,6 +23,7 @@ def run(gw: GatewayConfig, teleport: TeleportAdapter) -> PipelineResult:
         summary.task_status_counts = _parse_table(sections.get("TASK_STATUS_COUNTS", ""))
         summary.study_processing_status = _parse_table(sections.get("STUDY_STATUS", ""))
         summary.series_processing_status = _parse_table(sections.get("SERIES_STATUS", ""))
+        _parse_sc_publish_24h(summary, sections.get("SC_PUBLISH_24H", ""))
     except TeleportError as e:
         result.error = str(e)
         result.status = Status.WARNING
@@ -96,6 +97,14 @@ def _parse_images_recent(summary: PipelineSummary, output: str) -> None:
         summary.images_last_5m = _int(row[0])
         summary.images_last_15m = _int(row[1])
         summary.images_updated_last_5m = _int(row[2])
+    if len(row) >= 4:
+        summary.images_last_24h = _int(row[3])
+
+
+def _parse_sc_publish_24h(summary: PipelineSummary, output: str) -> None:
+    row = _first_row(output)
+    if row:
+        summary.sc_published_24h = _int(row[0])
 
 
 def _parse_tasks_recent(summary: PipelineSummary, output: str) -> None:

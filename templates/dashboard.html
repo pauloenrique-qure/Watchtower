@@ -87,8 +87,16 @@
       {% if pl and pl.summary %}
       {% set s = pl.summary %}
       <div class="metric-row">
+        <span class="metric-label">SC→PACS 24h</span>
+        <span class="metric-value" data-metric="scpacs24h">{{ s.sc_published_24h if s.sc_published_24h is not none else '—' }}</span>
+      </div>
+      <div class="metric-row">
         <span class="metric-label">Img 15m</span>
         <span class="metric-value" data-metric="img15m">{{ s.images_last_15m if s.images_last_15m is not none else '—' }}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Img 24h</span>
+        <span class="metric-value" data-metric="img24h">{{ s.images_last_24h if s.images_last_24h is not none else '—' }}</span>
       </div>
       <div class="metric-row">
         <span class="metric-label">Proc 15m</span>

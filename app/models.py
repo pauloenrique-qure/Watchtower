@@ -77,7 +77,9 @@ class PipelineSummary(BaseModel):
     not_uploaded_to_cloud: int | None = None
     images_last_5m: int | None = None
     images_last_15m: int | None = None
+    images_last_24h: int | None = None
     images_updated_last_5m: int | None = None
+    sc_published_24h: int | None = None
     pending_created_15m: int | None = None
     processed_15m: int | None = None
     failed_15m: int | None = None
