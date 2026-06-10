@@ -41,7 +41,8 @@
   <table class="detail-table">
     <tr><td>Hostname</td><td>{{ hw.hostname }}</td></tr>
     <tr><td>Uptime</td><td>{{ hw.uptime }}</td></tr>
-    <tr><td>Load avg (1/5/15m)</td><td>{{ hw.load_1m }} / {{ hw.load_5m }} / {{ hw.load_15m }}  ({{ hw.cores }} cores)</td></tr>
+    <tr><td>Load avg (1/5/15m)</td><td>{{ hw.load_1m }} / {{ hw.load_5m }} / {{ hw.load_15m }}</td></tr>
+    <tr><td>Cores</td><td>{{ hw.cores }}</td></tr>
     <tr><td>RAM Total</td><td>{{ hw.ram_total_mb }} MB</td></tr>
     <tr><td>RAM Available</td><td>{{ hw.ram_available_mb }} MB ({{ 100 - hw.ram_used_pct if hw.ram_used_pct is not none else '—' }}% free)</td></tr>
     <tr><td>Swap</td><td>{{ hw.swap_used_mb }}/{{ hw.swap_total_mb }} MB ({{ hw.swap_used_pct }}%)</td></tr>
