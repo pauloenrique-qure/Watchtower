@@ -132,6 +132,8 @@
     setMetric(card, "disk",       hw.disk_used_pct != null ? `${hw.disk_used_pct}%` : null);
     setMetric(card, "temp",       hw.temp_celsius != null ? `${hw.temp_celsius}°C` : hw.temp_celsius === null ? "UNKNOWN" : null);
     setMetric(card, "workers",    dk.workers_total != null ? `${dk.workers_up}/${dk.workers_total} up` : null);
+    setMetric(card, "scpacs24h",   s.sc_published_24h ?? null);
+    setMetric(card, "img24h",     s.images_last_24h  ?? null);
     setMetric(card, "img15m",     s.images_last_15m ?? null);
     setMetric(card, "proc15m",    s.processed_15m ?? null);
     setMetric(card, "failed15m",  s.failed_15m ?? null, !!s.failed_15m);
