@@ -61,9 +61,3 @@ gateways:
     country: Mexico
     profile: extended
 
-  - name: HMA MINSA
-    host: hmaminsa.rpi
-    ssh_login: ubuntu
-    enabled: true
-    country: Peru
-    profile: standard
