@@ -61,3 +61,10 @@ gateways:
     country: Mexico
     profile: extended
 
+  - name: Cayetano Heredia
+    host: Cayetano_Heredia
+    ssh_login: ubuntu
+    enabled: true
+    country: Peru
+    profile: standard
+
