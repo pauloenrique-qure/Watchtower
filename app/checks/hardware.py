@@ -102,8 +102,11 @@ def _parse_memory(result: HardwareResult, output: str) -> None:
             try:
                 result.swap_total_mb = int(parts[1])
                 result.swap_used_mb = int(parts[2])
-                if result.swap_total_mb:
-                    result.swap_used_pct = round(result.swap_used_mb / result.swap_total_mb * 100, 1)
+                result.swap_used_pct = (
+                    round(result.swap_used_mb / result.swap_total_mb * 100, 1)
+                    if result.swap_total_mb
+                    else 0.0
+                )
             except (ValueError, IndexError):
                 pass
 
